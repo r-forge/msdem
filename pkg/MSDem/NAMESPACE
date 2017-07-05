@@ -1,0 +1,3 @@
+import("stats", "utils", "grDevices", "graphics", "ggplot2", "car", "devtools", "plyr", "data.table", "stringr")
+importFrom("network", network.initialize, add.edges)
+export("state.space", "msproj", "fread.msproj")

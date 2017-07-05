@@ -1,0 +1,12 @@
+Package: MSDem
+Type: Package
+Title: Multi-State Demography
+Version: 0.0.2
+Date: 2017-07-05
+Author: Marcus Wurzer [aut, cre],
+  Samir KC [aut],
+  Markus Speringer [ctb]
+Maintainer: Marcus Wurzer <wurzer@iiasa.ac.at>
+Description: Does multi-state population projections having age, sex, and education as possible layers and region and residence as possible geographical units.
+License: GPL (>= 3)
+Imports: stats, utils, grDevices, graphics, ggplot2, car, devtools, plyr, data.table, stringr, network
