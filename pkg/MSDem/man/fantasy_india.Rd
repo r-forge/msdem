@@ -7,7 +7,7 @@ A dataset for a fantasy India consisting of just two states.
 \description{
 The dataset is used in the examples section of \code{msproj()}. It includes all the 
 necessary information to run a multi-state population projection for the two Indian 
-states Andaman and Nicobar Islands (ISO code: IN.AN) and Andhra Pradesh (ISO code: IN.AD).
+states Andaman and Nicobar Islands (ISO code: IN.AN) and Andhra Pradesh (ISO code: IN.AP).
 The dataset is limited to these two states because this keeps the file small and the 
 time needed to run the model short.
 }

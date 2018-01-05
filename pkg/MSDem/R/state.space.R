@@ -71,6 +71,7 @@ state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = 
       mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
       mig <- subset(mig, xor(origin == "World", destination == "World")) #no further distinction of cases needed
       mig <- cbind(mig, setNames(data.frame(NA), mig.var))
+      rownames(mig) <- 1:nrow(mig)
       }
     #reclassification:
       if (is.not.null(residence)) {
@@ -100,7 +101,7 @@ state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = 
     dimnames(edu.mat) <- list(vars$edu, vars$edu)
     #updated educ to match st.sp format:
     vars.edu <- c(st.sp.vars, list(edu.to = st.sp.vars$edu))
-    #period has to be expanded:
+    #period has to be expanded because of the computations in eapr.R:
     vars.edu$period <- seq(min(period), by = 5, length.out = length(period) + 2)
     vars.edu$age <- seq(10, 30, 5)
     use.vars.edu <- vars.edu[sapply(vars.edu, function(x) is.not.null(x))]
@@ -141,5 +142,11 @@ state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = 
   write.csv(var.def, paste(input.dir, country, "_", scen, "_var_def.csv", sep = ""), row.names = FALSE) #doesn't include possible education transitions  
   row.names(st.sp) <- 1:nrow(st.sp)
   write.csv(st.sp, paste(input.dir, country, "_", scen, "_state_space.csv", sep = ""), row.names = FALSE)    
-  return(list(state.space = st.sp, variable.definitions = var.def, migration = mig, edu.trans = edu.mat))
+  res <- list(state.space = st.sp, variable.definitions = var.def, migration = NULL, edu.trans = edu.mat)
+  if (exists("mig")) {
+    res$migration <- mig
+  } else {
+    res <- res[names(res) != "migration"]
+  }
+  return(res)
 }
