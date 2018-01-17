@@ -2,9 +2,11 @@
 title: "Running a multistate population projection"
 author: "Marcus Wurzer"
 date: '`r Sys.Date()`'
-output:
-  html_document: default
-  pdf_document: default
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Running a multistate population projection}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
