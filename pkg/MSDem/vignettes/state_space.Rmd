@@ -38,28 +38,6 @@ Bringing the `MSDEM`-package into being, we quickly realized that when following
 
 Let's have a look at the list of function arguments first:
 
-
-```{r MSDem settings, include = FALSE}
-patt = "india_AGSRE_Const"
-#datasets = fread.msproj(model.patt = patt)
-#data <- datasets
-country = NULL
-SSP = "SSP2"
-fert = NULL
-mort = NULL
-int.mig = NULL
-recl = NULL
-edu = NULL
-reclass.model = NULL
-reclass.period = 10
-nSx = "axmx"
-iPr = 18
-maxeapr5 = c(urban = 0.7, rural = 0.5, total = 0.6)
-mig.adj = FALSE
-mort.ediff = TRUE
-```
-
-
 ```{r}
 args(state.space)
 ```
