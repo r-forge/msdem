@@ -75,7 +75,7 @@ Let's have a look at the two components that contain the data in turn.
 The first few lines of the filled migration file look like the following (note that only the first 8 of the 76 columns are presented):
 
 ```{r}
-head(fantasy_india$india_AGSRE_Baseline_mig)
+head(fantasy_india$India_AGESR_Const_mig)
 ```
 
 The first thing we notice is that there is an `origin` column, but no `destination` column. The reason for this was already explained _"Creating and filling the state space"_ vignette: Choosing the wide format saves rows, which helps us to avoid problems if users want to use Microsoft Excel to fill the file. Thus, each region/residence combination (`IN.AN_urban` etc.) can be viewed as a separate `destination` column.  
@@ -85,7 +85,7 @@ The first thing we notice is that there is an `origin` column, but no `destinati
 Also for this component we want to have a look at the first 6 lines and the first 8 columns:
 
 ```{r}
-head(fantasy_india$india_AGSRE_Baseline_state_space)
+head(fantasy_india$India_AGESR_Const_state_space)
 ```
 
 There are `r fantasy_india$India_AGESR_Const_state_space$IN.AN_urban[1]` males aged zero and belonging to the lowest educational group in the rural parts of the Andaman and Nicobar Islands region, `r fantasy_india$India_AGESR_Const_state_space$IN.AP_urban[1]` show the same pattern in Andhra Pradesh etc. Since there are no persons with an educational level above `e1` in this age group, all the other entries are zeroes.
@@ -93,10 +93,10 @@ There are `r fantasy_india$India_AGESR_Const_state_space$IN.AN_urban[1]` males a
 The last 6 lines give us the following information:
 
 ```{r}
-tail(fantasy_india$india_AGSRE_Baseline_state_space)
+tail(fantasy_india$India_AGESR_Const_state_space)
 ```
 
-Here we see the educational attainment progression ratios for females in 2095, with zeroes for those transitions that are not possible.
+Here we see the educational attainment progression ratios for females in 2105, with zeroes for those transitions that are not possible.
 
 # Running a projection
 
@@ -130,7 +130,7 @@ args(msproj)
 With the `fantasy_india`-dataset loaded above, we now run a simulation. We only specify three of the function's arguments: `data` is straightforward, `reclass.period` is set to 10 years because that is the number of years it takes to observe the levels of reclassification given in the input data, and `patt` is used to create meaningful path and file names:
 
 ```{r}
-res <- msproj(data = fantasy_india, reclass.period = 10, patt = "FantasyIndia_AGSRE_Const")
+res <- msproj(data = fantasy_india, reclass.period = 10, patt = "FantasyIndia_AGESR_Const")
 ```
 
 While the projection is running, the user gets constantly informed about the current projection period.
@@ -251,12 +251,12 @@ Not all the columns can be presented in this screenshot, but the following list 
 for rural areas: `pop4 = (pop3.shift.total * perural) - (pop3.shift.total * perural * reclasstr)`  
 for urban areas: `pop4 = (pop3.shift.total * perural) + (pop3.shift.total * (1 - perural) * reclasstr)`
 
-For instance, in line no. 1, we see that there are 2061096 females aged 0-4 that have no education and live in the rural areas of Andhra Pradesh at the beginning of the 2010-2014 period. The nsx-value is about 0.984, thus 32905 of them die and 2028191 survive etc.
+For instance, in line no. 3, we see that there are 2061096 females aged 0-4 that have no education and live in the rural areas of Andhra Pradesh at the beginning of the 2010-2014 period. The nsx-value is about 0.984, thus 32905 of them die and 2028191 survive etc.
 
 Let's now run the simulation again, but this time we set `detail.out = TRUE`:
 
-```{r, echo = FALSE}
-res <- msproj(data = fantasy_india, reclass.period = 10, patt = "FantasyIndia_AGSRE_Const", detail.out = TRUE)
+```{r}
+res <- msproj(data = fantasy_india, reclass.period = 10, patt = "FantasyIndia_AGESR_Const", detail.out = TRUE)
 ```
 
 This doesn't change the results given in R, but additional files are saved into the subfolder containing the results:
@@ -267,13 +267,13 @@ This doesn't change the results given in R, but additional files are saved into 
 
 These additional files hold aggregated information about births, deaths etc. and some projection statistics in tabular and graphical form (saved as .csv's and pdf's, respectively). For example, the .csv-file having "e4plus" in its name contains the proportion of people having completed educational level 4 or above, separately for each period, region, and sex:
 
-![_Percentage of people having completed e4 or above_](pics/FantasyIndia_AGSRE_Const_SSP2_2017-12-17_171121_e4_plus_csv.png)
+![_Percentage of people having completed e4 or above_](pics/e4_plus_csv.png)
 
 &nbsp;
 
-Two figures (one for each region) are produced using this information, the one for Andhra Pradesh is presented here:
+Two figures (one for each region) are auomatically produced using this information, the one for Andhra Pradesh is presented here:
 
-![_Percentage of people having completed e4 or above in Andhra Pradesh_](pics/FantasyIndia_AGSRE_Const_SSP2_2017-12-17_171121_e4_plus.png){ height=70% width=70% }
+![_Percentage of people having completed e4 or above in Andhra Pradesh_](pics/e4_plus.png){ height=70% width=70% }
 
 &nbsp;
 
