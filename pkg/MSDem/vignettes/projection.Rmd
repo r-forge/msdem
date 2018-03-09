@@ -118,7 +118,7 @@ args(msproj)
 - `recl` an optional vector specifying relative changes in comparison to the base reclassification assumptions, comparable to `fert`. Not used at the moment.
 - `edu` an optional vector specifying relative changes in comparison to the base educational transition assumptions, comparable to `fert`. Not used at the moment.
 - `detail.out` logical. Should detailed output be written to the "output_data" directory, which includes frequency tables and pdf's? Defaults to `FALSE`.
-- `nsx` the information used to compute the nsx's. Defaults to `"axmx"`, i.e., the nsx's are computed using ax and mx. Alternatively, the computation can be based on `"le0"`.
+- `nSx` the information used to compute the nSx's. Defaults to `"axmx"`, i.e., the nSx's are computed using ax and mx. Alternatively, the computation can be based on `"le0"`.
 - `iPr` the number of simulation periods. Must be smaller or equal to the number of periods in the simulation horizon. Defaults to 18 in compliance with the default simulation horizon (90 years = 18 five-year periods).
 - `reclass.model` an R object of class "glm" containing the reclassification model. Needed to estimate the proportion of the rural population that is reclassified depending on the current population distribution between urban and rural areas. Defaults to NULL.
 - `reclass.period` an integer number specifying the space of time for the reclassification data, i.e., the number of years it takes to observe the specified proportion of reclassification. Defaults to 5.
@@ -131,6 +131,7 @@ With the `fantasy_india`-dataset loaded above, we now run a simulation. We only 
 
 ```{r}
 res <- msproj(data = fantasy_india, reclass.period = 10, patt = "FantasyIndia_AGESR_Const")
+
 ```
 
 While the projection is running, the user gets constantly informed about the current projection period.
@@ -231,8 +232,8 @@ Not all the columns can be presented in this screenshot, but the following list 
 - `region` Region of the subgroup.
 - `residence` Residence of the subgroup.
 - `pop` Total population at the beginning of the period: How many people belong to the subgroup?
-- `nsx` Survival ratio (nSx).
-- `pop1` Total population after applying the mortality component = Number of people surviving (`pop1 = pop * nsx`).
+- `nSx` Survival ratio.
+- `pop1` Total population after applying the mortality component = Number of people surviving (`pop1 = pop * nSx`).
 - `deaths` Number of deaths in the total population (`deaths = pop - pop1`).
 - `areasex` Used internally, can be ignored by the users.
 - `pop2` Total population after applying the education component = People are redistributed among the education categories.
@@ -251,7 +252,7 @@ Not all the columns can be presented in this screenshot, but the following list 
 for rural areas: `pop4 = (pop3.shift.total * perural) - (pop3.shift.total * perural * reclasstr)`  
 for urban areas: `pop4 = (pop3.shift.total * perural) + (pop3.shift.total * (1 - perural) * reclasstr)`
 
-For instance, in line no. 3, we see that there are 2061096 females aged 0-4 that have no education and live in the rural areas of Andhra Pradesh at the beginning of the 2010-2014 period. The nsx-value is about 0.984, thus 32905 of them die and 2028191 survive etc.
+For instance, in line no. 3, we see that there are 2061096 females aged 0-4 that have no education and live in the rural areas of Andhra Pradesh at the beginning of the 2010-2014 period. The nSx-value is about 0.984, thus 32905 of them die and 2028191 survive etc.
 
 Let's now run the simulation again, but this time we set `detail.out = TRUE`:
 

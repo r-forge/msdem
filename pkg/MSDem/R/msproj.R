@@ -1,5 +1,5 @@
 msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert = NULL, mort = NULL, int.mig = NULL, recl = NULL, edu = NULL, 
-                   detail.out = FALSE, nsx = "axmx", iPr = 18, reclass.model = NULL, reclass.period = 5, 
+                   detail.out = FALSE, nSx = "axmx", iPr = 18, reclass.model = NULL, reclass.period = 5, 
                    maxeapr5 = c(urban = 0.7, rural = 0.5, total = 0.6)) {
   "%nin%" <- function(x, y) !x %in% y
   is.not.null <- function(x) !is.null(x)
@@ -141,7 +141,7 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   #   stop(c("There are either no male or female inhabitants of age ", paste(names(mf.miss[sapply(mf.miss, nrow) > 0]), collapse = ", "), " in some of the areas."))
   # }
   #4. nsxedu:
-  if (nsx == "axmx") {
+  if (nSx == "axmx") {
     if (length(pos.axmx) > 0) {
       nsxedu.dt <- data[[pos.axmx]]
     } else {
@@ -169,14 +169,14 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     }
     nsxedu.dt$pattern <- do.call(paste, c(patt.temp, sep = "_"))
     nsxedu.dt[, `:=` (axmxvars = NULL, age = NULL)]
-    setcolorder(nsxedu.dt, c("period", "pattern", "nsx"))
+    setcolorder(nsxedu.dt, c("period", "pattern", "nSx"))
     #write.csv(nsxedu.dt, paste("input_data/", patt, "_axmx.csv", sep = ""), row.names = FALSE)
     }
   #sanity check:
-  if (any(nsxedu.dt$nsx < 0 | nsxedu.dt$nsx > 1)) {
-    stop(paste("nsx-values smaller than 0 or larger than 1 occured.\n Please check the values for ax and mx in your input data."))#, e.g., in lines",  
-    #                 paste(which(nsxedu.dt$nsx < 0 | nsxedu.dt$nsx > 1)[1:10], collapse = ", "), "etc."))
-    # nsxedu.dt[nsxedu.dt$nsx < 0 | nsxedu.dt$nsx > 1]
+  if (any(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)) {
+    stop(paste("nSx-values smaller than 0 or larger than 1 occured.\n Please check the values for ax and mx in your input data."))#, e.g., in lines",  
+    #                 paste(which(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)[1:10], collapse = ", "), "etc."))
+    # nsxedu.dt[nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1]
     }
   }
   #5. asfredu:
@@ -301,19 +301,19 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   }
   
   #unconditional computation of nsxedu:
-  if (nsx == "le0") {
+  if (nSx == "le0") {
     if(length(SSP$mort) < 18) SSP$mort <- c(SSP$mort, rep(SSP$mort[length(SSP$mort)], 18 - length(SSP$mort)))
     SSP$mort <- cumsum(SSP$mort)
     nsxedu.dt <- le0.change(SSP$mort, out.name)
     sx.vars <- setdiff(intersect(names(popedu.dt), names(nsxedu.dt)), "value")
-    nsxedu.dt <- nsxedu.dt[region != "india", .(var = "nsx", value = mean(value)), by = sx.vars]
+    nsxedu.dt <- nsxedu.dt[region != "india", .(var = "nSx", value = mean(value)), by = sx.vars]
     nsxedu.dt[, age := age - 5]
     if ("region" %in% p.vars) {
       nsxedu.dt$region <- factor(nsxedu.dt$region, labels = data[[pos.var.def]][variables == "region"]$values)
       }
     nsxedu.dt[, pattern := do.call(paste, c(.SD, sep = "_")), .SDcols = p.vars]
     nsxedu.dt <- nsxedu.dt[, .(period, pattern, value)]
-    setnames(nsxedu.dt, "value", "nsx")
+    setnames(nsxedu.dt, "value", "nSx")
   }
       
   if (is.not.null(int.mig)) { 
@@ -347,7 +347,7 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     setnames(popedu1, "value", "pop")
     nsxedu1 <- nsxedu.dt[period == base.year + 5 * (iPr - 1)][, period := NULL]
     projedu <- popedu1[nsxedu1, on = "pattern", nomatch = 0]
-    projedu[, `:=` (pop1 = pop * nsx, deaths = pop * (1 - nsx))]
+    projedu[, `:=` (pop1 = pop * nSx, deaths = pop * (1 - nSx))]
 
     if (is.not.null(ass.edu.dt)) {
       projedu[, areasex := do.call(paste, c(.SD, sep = "_")), .SDcols = intersect(names(projedu), areasex.vars)]
@@ -427,14 +427,14 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
 
     s0.male <- nsxedu1[grep("\\bmale_-5", nsxedu1$pattern)]
     s0.female <- nsxedu1[grep("female_-5", nsxedu1$pattern)]
-    #only one nsx is used for all edu levels:
+    #only one nSx is used for all edu levels:
     if (any(pop.04$area != country)) { #= if region and/or residence are given
       s0.male <- s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)[1]), ]
       s0.female <- s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)[1]), ]
       pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), pattern],
-                                                                                   s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), nsx],
+                                                                                   s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), nSx],
                                                                                    s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), pattern],
-                                                                                   s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), nsx])]
+                                                                                   s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), nSx])]
       pop.04[, c("surv.male", "dead.male", "surv.female", "dead.female") := list(births * 1000 / (1000 + sexr) * s0.male,
                                                                                  births * 1000 / (1000 + sexr) * (1 - s0.male),
                                                                                  births * sexr / (1000 + sexr) * s0.female,
@@ -442,7 +442,7 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     } else {
       s0.male <- s0.male[1, ]
       s0.female <- s0.female[1, ]
-      pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male$pattern, s0.male$nsx, s0.female$pattern, s0.female$nsx)]
+      pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male$pattern, s0.male$nSx, s0.female$pattern, s0.female$nSx)]
       pop.04[, c("surv.male", "dead.male", "surv.female", "dead.female") := list(births * 1000 / (1000 + sexr) * s0.male,
                                                                                  births * 1000 / (1000 + sexr) * (1 - s0.male),
                                                                                  births * sexr / (1000 + sexr) * s0.female,

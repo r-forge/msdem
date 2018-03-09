@@ -3,16 +3,17 @@
 # - empty state space ('country_scenario_state_space.csv')
 # - migration ('country_scenario_mig.csv')
 
-state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = c("rural", "urban"), sex = c("male", "female"),
-                        age = c(0, 100, 5), edu = NULL, migration = "biregional", mig.var = "mrate", country = "World", scen = "SSP2", 
-                        data.dir = "input_data/") {
+state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence = c("rural", "urban"), sex = c("male", "female"),
+                        age = c(0, 100), edu = NULL, migration = "biregional", mig.var = "mrate", country = "Country", 
+                        scen = "SSP2", data.dir = "input_data/") {
   is.not.null <- function(x) !is.null(x)
   "%nin%" <- function(x, y) which(!x %in% y)
   
-  #generate age sequence out of the given values and add 1 for the life table:
-  age <- sort(c(seq(age[1], age[2], age[3]), 1))
+  #generate age sequence out of the given values and add 1 for the life table (if steps are not annual):
+  age <- unique(sort(c(seq(age[1], age[2], by), 1)))
   
-  #delete last value of 'period':
+  #generate period sequence and delete last value of 'period':
+  period <- seq(period[1], period[2], by)
   period <- period[- length(period)]
   
   #Create directory for data files:
@@ -43,9 +44,10 @@ state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = 
     
   #state space and standard variables:
   st.sp <- expand.grid(rev(st.sp.vars))[, length(st.sp.vars):1]
-  pop <- cbind(subset(st.sp, period == min(period) & age != 1), 
+  pop <- cbind(subset(st.sp, period == min(period)), 
                var = factor("pop", levels = c("pop", "le0", "mx", "ax", "asfr", "sexr", "reclasstr", "gap", "perural", "eapr")), 
                matrix(NA, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
+  if (by == 5) pop <- subset(pop, age != 1)
   le0 <- cbind(subset(st.sp, age == 0), var = "le0", matrix(NA, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
   mx <- cbind(st.sp, var = "mx", matrix(NA, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
   ax <- cbind(st.sp, var = "ax", matrix(NA, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols))) 
@@ -53,31 +55,39 @@ state.space <- function(period = seq(2010, 2100, 5), region = NULL, residence = 
   fert <- cbind(subset(st.sp, age %in% 15:45 & sex == "female"), var = "asfr", matrix(NA, ncol = length(spatial.cols), 
                                                                                       dimnames = list(NULL, spatial.cols)))
   #expand state.space by sex ratio:
-  sexr <- c(rep(NA, ncol(st.sp)), "sexr", rep(NA, length(spatial.cols)))
-  
+  sexr <- data.frame(period = period, matrix(NA, nrow = length(period), ncol = ncol(st.sp) - 1, dimnames = list(NULL, colnames(st.sp)[-1])), 
+                var = c("sexr"), 
+                matrix(NA, nrow = length(period), ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
   #migration is possible if we have either region or residence or both
   #biregional (region from/to rest) / bilateral (region from/to every other region) choice
   #for bilateral migration, a matrix (wide) format is used; for biregional, the standard (long) format is kept
   if (is.not.null(region) | is.not.null(residence)) {
     use.vars.mig <- c(st.sp.vars, list(origin = spatial.cols))
-    use.vars.mig$age <- setdiff(use.vars.mig$age, 1)
+    if (by == 5) use.vars.mig$age <- setdiff(use.vars.mig$age, 1)
     use.vars.mig$period <- min(use.vars.mig$period)
-    use.vars.mig$origin <- c(use.vars.mig$origin, "World")
-    mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
     if (migration == "bilateral") { #for bilateral, region must be there!
+      use.vars.mig$origin <- c(use.vars.mig$origin, "World")
+      mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
       mig <- cbind(mig, var = mig.var, matrix(NA, ncol = length(use.vars.mig$origin), dimnames = list(NULL, use.vars.mig$origin)))
     } else { 
+      use.vars.mig$origin <- c(use.vars.mig$origin, country)
+      mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
       use.vars.mig$destination <- use.vars.mig$origin
       mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
-      mig <- subset(mig, xor(origin == "World", destination == "World")) #no further distinction of cases needed
+      mig <- subset(mig, xor(origin == country, destination == country)) #no further distinction of cases needed
       mig <- cbind(mig, setNames(data.frame(NA), mig.var))
       rownames(mig) <- 1:nrow(mig)
+      #international migration:
+      mig.int <- mig
+      idx <- which(names(mig.int) %in% c("origin", "destination"))
+      mig.int[, idx] <- lapply(mig.int[, idx], function(x) gsub(country, "World", x))
+      mig <- rbind(mig, mig.int)
       }
     #reclassification:
       if (is.not.null(residence)) {
-        reclass <- cbind(matrix(NA, nrow = 3, ncol = ncol(st.sp), dimnames = list(NULL, colnames(st.sp))), 
-                         var = c("reclasstr", "gap", "perural"), 
-                         matrix(NA, nrow = 3, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
+        reclass <- data.frame(matrix(NA, nrow = 3, ncol = ncol(st.sp), dimnames = list(NULL, colnames(st.sp))), 
+                              var = c("reclasstr", "gap", "perural"), 
+                              matrix(NA, nrow = 3, ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
     #update var.def:
         var.def <- rbind(var.def, c("reclass", "TRUE"))
       } else {

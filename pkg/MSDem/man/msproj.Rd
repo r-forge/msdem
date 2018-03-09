@@ -10,7 +10,7 @@ Running a multi-state population projection
 msproj(data = NULL, patt = NULL, country = NULL,
        SSP = "SSP2", fert = NULL, mort = NULL, 
        int.mig = NULL, recl = NULL, edu = NULL, 
-       detail.out = FALSE, nsx = "axmx", iPr = 18, 
+       detail.out = FALSE, nSx = "axmx", iPr = 18, 
        reclass.model = NULL, reclass.period = 5, 
        maxeapr5 = c(urban = 0.7, rural = 0.5, total = 0.6))
 }
@@ -46,8 +46,8 @@ an optional vector specifying relative changes in comparison to the base educati
   \item{detail.out}{
 logical. Should detailed output be written to the "output_data" directory, which includes frequency tables and PDF's? Defaults to \code{FALSE}
 }
-  \item{nsx}{
-the information used to compute the nsx's. Defaults to \code{"axmx"}, i.e., the nsx's are computed using ax and mx. Alternatively, the computation can be based on \code{"le0"}.
+  \item{nSx}{
+the information used to compute the nSx's. Defaults to \code{"axmx"}, i.e., the nSx's are computed using ax and mx. Alternatively, the computation can be based on \code{"le0"}.
 }
   \item{iPr}{
 the number of simulation periods. Must be smaller or equal to the number of periods in the simulation horizon. Defaults to 18 in compliance with the default simulation horizon (90 years = 18 five-year periods).
@@ -95,14 +95,14 @@ Marcus Wurzer, Samir K.C., & Markus Speringer
 \link{state.space}, \link{fread.msproj}, \link{fantasy_india}
 }
 \examples{
-## Using Indian data, but only for two states (IN.AN and IN.AD).
+## Using Indian data, but only for two states (IN.AN and IN.AP).
 data(fantasy_india) #input data files
 fantasy_india 
 
 ##A full model using age, gender, region, residence and education 
 ##is run. We use country name "FantasyIndia" since India only
 ##consists of two regions here:
-res <- msproj(data = fantasy_india, nsx = "axmx", reclass.period = 10, 
+res <- msproj(data = fantasy_india, nSx = "axmx", reclass.period = 10, 
               country = "FantasyIndia")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

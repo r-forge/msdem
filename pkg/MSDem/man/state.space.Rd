@@ -7,17 +7,20 @@ Creating data files for multi-state population projections
 \code{state.space} is used to generate the data files needed as input for function \code{msproj} that runs a multi-state population projections.
 }
 \usage{
-state.space(period = seq(2010, 2100, 5), region = NULL, 
+state.space(period = c(2010, 2100), by = 5, region = NULL, 
             residence = c("rural", "urban"), 
-            sex = c("male", "female"), age = c(0, 100, 5), 
+            sex = c("male", "female"), age = c(0, 100), 
             edu = NULL, migration = "biregional", 
-            mig.var = "mrate", country = "World",
+            mig.var = "mrate", country = "Country",
             scen = "SSP2", data.dir = "input_data/")
 }
 
 \arguments{
   \item{period}{
-a sequence used to define the time horizon (i.e., start year and end year) and the time increment for the simulation. By default, simulations start in 2010 and end in 2100 with 5-year steps.
+a vector with two values used to define the time horizon of the simulation, i.e., start year and end year. By default, simulations start in 2010 and end in 2100.
+}
+  \item{by}{
+a number specifying the time increment for the simulation, and consequently, the definition of the age groups. Defaults to 5, i.e., period lengths of five years and five-year age groups. May also be set to 1, but please note that \code{msproj()} doesn't provide the functionality to deal with period lengths of one year yet.
 }
   \item{region}{
 an optional vector of region names that has to be entered by the users if they want to do a sub-national simulation (region here stands for any administrative level below the national one, this could be regions, states, districts, municipalities etc.). Should be \code{NULL} (if no regions are used) or a character vector.
@@ -29,7 +32,7 @@ an optional vector with the two values \code{urban} and \code{rural} used to spe
 a vector containing the two values \code{male} and \code{female}. The usage of \code{sex} is mandatory in any of the models, and thus, it is part of every state space.
 }
   \item{age}{
-a vector containing three values: Minimum age, maximum age, and the width of each age category. It defaults to a minimum age of 0 years, a maximum age of 100 years, and five-year age groups. Internally, the value 1 is added to the sequence in keeping with the structure of standard life tables. Just like \code{sex}, it is mandatory to use this variable.
+a vector containing two values: Minimum age and maximum age of the population. Defaults to 0 years and 100 years, respectively. The width of each age category is taken from the \code{by} argument and thus, defaults to 5. In keeping with the structure of standard life tables, two age groups (0 and 1-4) are created internally instead of using one 0-4 age group if five-year age groups are chosen. Just like \code{sex}, it is mandatory to use this variable.
 }
   \item{edu}{
 an optional vector specifying the number of educational levels to be used in the simulation. Should be \code{NULL} (the default) if education is not used in the simulation or a single number.
@@ -88,7 +91,7 @@ str(st.sp)
 ##scenario name given
 
 ##vector of ISO codes for the Indian states:
-reg <- c("IN.AD", "IN.AN", "IN.AR", "IN.AS", "IN.BR", "IN.CH", 
+reg <- c("IN.AD", "IN.AP", "IN.AR", "IN.AS", "IN.BR", "IN.CH", 
          "IN.CT", "IN.DD", "IN.DL", "IN.DN", "IN.GA", "IN.GJ", 
          "IN.HP", "IN.HR", "IN.JH", "IN.JK", "IN.KA", "IN.KL", 
          "IN.LD", "IN.MH", "IN.ML", "IN.MN", "IN.MP", "IN.MZ", 

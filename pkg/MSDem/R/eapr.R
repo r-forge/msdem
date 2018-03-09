@@ -4,9 +4,9 @@ eapr <- function(x, ass.edu.dt, maxeapr5) {
   nedu <- length(es)
   
   #end of the period values for all eapr, education transitions, and ages
-  eapr.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) & edu == unique(edu), value]
-  eapr.edu.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) & edu == unique(edu), edu]
-  eapr.age.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) & edu == unique(edu), age]
+  eapr.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period), value]
+  eapr.edu.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period), edu]
+  eapr.age.t1 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period), age]
   min.eapr.age <- min(eapr.age.t1)
   max.eapr.age <- max(eapr.age.t1)
   nage <- length(unique(eapr.age.t1))#ages with transitions
