@@ -1,20 +1,21 @@
-msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert = NULL, mort = NULL, int.mig = NULL, recl = NULL, edu = NULL, 
-                   detail.out = FALSE, nSx = "axmx", iPr = 18, reclass.model = NULL, reclass.period = 5, 
+msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert = NULL, mort = NULL, dom.mig = NULL, recl = NULL, edu = NULL, 
+                   detail.out = FALSE, nSx = "axmx", iPr = 18, reclass.model = NULL, reclass.period = 5, mig.adj = FALSE,
                    maxeapr5 = c(urban = 0.7, rural = 0.5, total = 0.6)) {
   "%nin%" <- function(x, y) !x %in% y
   is.not.null <- function(x) !is.null(x)
   
   #positions of data files in the list:
   pos.st.sp <- grep("state.space", names(data))
-  pos.mig <- grep("mig", names(data))
+  pos.mig_dom <- grep("mig_dom", names(data))
+  pos.mig_int <- grep("mig_int", names(data))
   pos.var.def <- grep("var.def", names(data))
   pos.axmx <- grep("axmx", names(data))
   spatial.vars <- intersect(c("region", "residence"), data[[pos.var.def]]$variables)
   
   if (length(country) == 0) {
     country <- as.character(data[[pos.var.def]][variables == "country", values])
-    #if there is still no country, set "country" as country:
-    if (length(country) == 0) country <- "country"
+    #if there is still no country, set "Country" as country:
+    if (length(country) == 0) country <- "Country"
     }
   
   #-----sanity checks-----
@@ -39,8 +40,8 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     which(!complete.cases(x[, data.cols, with = FALSE]))
   }
   x <- check.na(data[[pos.st.sp]])
-  if (length(pos.mig > 0)) {
-    y <- check.na(data[[pos.mig]])
+  if (length(pos.mig_dom > 0)) {
+    y <- check.na(data[[pos.mig_dom]])
   } else {
     y <- NULL
   }
@@ -62,8 +63,8 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     }
   
   x <- check.empty(data[[pos.st.sp]])
-  if (length(pos.mig > 0)) {
-    y <- check.empty(data[[pos.mig]])
+  if (length(pos.mig_dom > 0)) {
+    y <- check.empty(data[[pos.mig_dom]])
   } else {
     y <- NULL
   }
@@ -107,8 +108,9 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   sexratio.dt <- sexratio.dt[sexr != 0][, var := NULL]
   if (any(sexratio.dt$area == "value")) sexratio.dt$area <- country
   
-  #column order for popedu.dt, asfredu.dt, ass.edu.dt, inter.dt and nsxedu.dt:
+  #column order for popedu.dt, asfredu.dt, ass.edu.dt, dom.dt and nsxedu.dt:
   col.order <- c("period", "sex", "age", "edu", "region", "residence", "origin", "destination", "pattern", "var", "value")
+  
   #3. popedu:
   popedu.dt <- data[[pos.st.sp]][var == "pop"]
   if (any(c("region", "residence") %in% spatial.vars)) {
@@ -171,14 +173,15 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     nsxedu.dt[, `:=` (axmxvars = NULL, age = NULL)]
     setcolorder(nsxedu.dt, c("period", "pattern", "nSx"))
     #write.csv(nsxedu.dt, paste("input_data/", patt, "_axmx.csv", sep = ""), row.names = FALSE)
+      
+      #sanity check:
+      if (any(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)) {
+        stop(paste("nSx-values smaller than 0 or larger than 1 occured.\n Please check the values for ax and mx in your input data."))#, e.g., in lines",  
+        #                 paste(which(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)[1:10], collapse = ", "), "etc."))
+        # nsxedu.dt[nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1]
+        }
+      }
     }
-  #sanity check:
-  if (any(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)) {
-    stop(paste("nSx-values smaller than 0 or larger than 1 occured.\n Please check the values for ax and mx in your input data."))#, e.g., in lines",  
-    #                 paste(which(nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1)[1:10], collapse = ", "), "etc."))
-    # nsxedu.dt[nsxedu.dt$nSx < 0 | nsxedu.dt$nSx > 1]
-    }
-  }
   #5. asfredu:
   asfredu.dt <- data[[pos.st.sp]][var == "asfr"]
   if (any(c("region", "residence") %in% spatial.vars)) {
@@ -226,26 +229,42 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   } else {
     ass.edu.dt <- NULL
     }
-  #7. inter:
-  if (length(pos.mig) > 0) {
-    inter.dt <- data[[pos.mig]]
-    #MW 2017-03-28: delete period information, otherwise matching projedu and inter is not possible from 2015 on
-    if ("period" %in% names(inter.dt)) inter.dt[, period := NULL]
-    if (any(names(inter.dt) == "mrate")) {
-      setnames(inter.dt, "mrate", "value")
+  #7. domestic migration:
+  if (length(pos.mig_dom) > 0) {
+    dom.dt <- data[[pos.mig_dom]]
+    #MW 2017-03-28: delete period information, otherwise matching projedu and dom is not possible from 2015 on
+    if ("period" %in% names(dom.dt)) dom.dt[, period := NULL]
+    if (any(names(dom.dt) == "mrate")) {
+      setnames(dom.dt, "mrate", "value")
     } else {
-      data.cols <- names(inter.dt)[-c(1:which(names(inter.dt) == "var"))]
-      typeof.tab <- table(sapply(inter.dt[, .SD, .SDcols = data.cols], typeof)) #to prevent warning message
-      mode(inter.dt$World) <- names(which(typeof.tab == max(typeof.tab)))
-      inter.dt <- melt(inter.dt, measure.vars = data.cols, variable.name = "destination")
+      data.cols <- names(dom.dt)[-c(1:which(names(dom.dt) == "var"))]
+      typeof.tab <- table(sapply(dom.dt[, .SD, .SDcols = data.cols], typeof)) #to prevent warning message
+      #MW 2018-05-11: delete the following line since "World" is no longer used for internal migration
+      #mode(dom.dt$World) <- names(which(typeof.tab == max(typeof.tab)))
+      dom.dt <- melt(dom.dt, measure.vars = data.cols, variable.name = "destination")
     }
-    inter.dt[, age := age - 5]
-    inter.dt <- inter.dt[age >= 0]
-    setcolorder(inter.dt, col.order[col.order %in% names(inter.dt)])
+    dom.dt[, age := age - 5]
+    dom.dt <- dom.dt[age >= 0]
+    setcolorder(dom.dt, col.order[col.order %in% names(dom.dt)])
     }
-
+  
   migr.contrl <- 1
-  if (exists("inter.dt")) inter.dt[, value := value * migr.contrl]
+  if (exists("dom.dt")) dom.dt[, value := value * migr.contrl]
+  
+  #8. international migration:
+  if (length(pos.mig_int) > 0) {
+    int.dt <- data[[pos.mig_int]]
+    #delete period information, otherwise matching projedu and int is not possible from 2015 on
+    #if ("period" %in% names(int.dt)) int.dt[, period := NULL]
+    int.dt[, age := age - 5]
+    int.dt <- int.dt[age >= 0]
+    setcolorder(int.dt, col.order[col.order %in% names(int.dt)])
+  }
+
+  # if mabs is used for emigration, estimate the corresponding mrate for the base period and keep it constant throughout the simulation
+  if ("mrate" %nin% int.dt) { 
+    int.dt <- int.dt # placeholder
+  }
   
   #-----------data preparation:----------
 
@@ -253,38 +272,38 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   
   SSP1 <- list(fert = c(seq(0.95, 0.8, -0.05), seq(0.7875, 0.75, -0.0125), rep(0.75, 10)), 
                mort = 0.5, 
-               int.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
+               dom.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
                recl = rep(1, 18), 
                edu = 1)
   SSP2 <- list(fert = 1, 
                mort = 0, 
-               int.mig = rep(1, 18), 
+               dom.mig = rep(1, 18), 
                recl = rep(1, 18), 
                edu = 1)
   SSP3 <- list(fert = c(seq(1.05, 1.2, 0.05), seq(1.2125, 1.25, 0.0125), rep(1.25, 10)), 
                mort = -0.5, 
-               int.mig = c(seq(0.875, 0.5, -0.125), rep(0.5, 14)), 
+               dom.mig = c(seq(0.875, 0.5, -0.125), rep(0.5, 14)), 
                recl = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
                edu = 1)
   SSP4 <- list(fert = c(seq(0.95, 0.8, -0.05), seq(0.7875, 0.75, -0.0125), rep(0.75, 10)), #MW 2016-08-31: changed fert assumptions from H to L
                mort = -0.5, 
-               int.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
+               dom.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
                recl = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
                edu = 1)
   SSP5 <- list(fert = c(seq(0.95, 0.8, -0.05), seq(0.7875, 0.75, -0.0125), rep(0.75, 10)), 
                mort = 0.5, 
-               int.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
+               dom.mig = c(seq(1.125, 1.5, 0.125), rep(1.5, 14)), 
                recl = c(seq(0.875, 0.5, -0.125), rep(0.5, 14)), 
                edu = 1)
   SSPs <- list(SSP1 = SSP1, SSP2 = SSP2, SSP3 = SSP3, SSP4 = SSP4, SSP5 = SSP5)
     
   SSP <- SSPs[[SSP.name]]
   
-  if(any(sapply(list(fert, mort, int.mig, recl, edu), is.not.null))) SSP <- "SSP6"
+  if(any(sapply(list(fert, mort, dom.mig, recl, edu), is.not.null))) SSP <- "SSP6"
  
   path.1 <- "output_data"
   path.2 <- paste(patt, "_", SSP.name, "_", format(Sys.time(), "%Y-%m-%d_%H%M%S"), sep = "")
-  if (!dir.exists(path.1)) dir.create(path.1, recursive = TRUE) #MW 2017-04-27 - works?
+  if (!dir.exists(path.1)) dir.create(path.1, recursive = TRUE)
   dir.create(file.path(path.1, path.2))
   out.name <- file.path(path.1, path.2, path.2)
   
@@ -316,12 +335,12 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     setnames(nsxedu.dt, "value", "nSx")
   }
       
-  if (is.not.null(int.mig)) { 
-    SSP$int.mig <- int.mig
+  if (is.not.null(dom.mig)) { 
+    SSP$dom.mig <- dom.mig
   }
-  if (SSP.name != "SSP2" | is.not.null(int.mig)) {  
-    if(length(SSP$int.mig) < 18) SSP$int.mig <- c(SSP$int.mig, rep(SSP$int.mig[length(SSP$int.mig)], 18 - length(SSP$int.mig)))
-    #inter doesn't contain a time variable and thus is multiplied with the int.mig-values within the loop below
+  if (SSP.name != "SSP2" | is.not.null(dom.mig)) {  
+    if(length(SSP$dom.mig) < 18) SSP$dom.mig <- c(SSP$dom.mig, rep(SSP$dom.mig[length(SSP$dom.mig)], 18 - length(SSP$dom.mig)))
+    #dom doesn't contain a time variable and thus is multiplied with the dom.mig-values within the loop below
     }
 
   if (exists("reclass.dt")) {      
@@ -374,88 +393,115 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
       projedu[, pop2 := pop1]
     }
     
-    #internal migration:
-    if (exists("inter.dt")) {
-      inter <- copy(inter.dt) 
-      inter <- inter[, value := value * SSP$int.mig[iPr]]
+    #----- domestic migration -----
+    if (exists("dom.dt")) {
+      dom <- copy(dom.dt)
+      dom <- dom[, value := value * SSP$dom.mig[iPr]]
       origin.vars <- intersect(names(projedu), c("region", "residence"))
       if (length(origin.vars) == 2) {
         projedu[, `:=` (origin = paste(region, residence, sep = "_"))]
         } else {
         projedu[, `:=` (origin = paste(projedu[[origin.vars]], sep = "_"))]
       }
-      inter <- projedu[inter, on = intersect(names(inter), names(projedu)), nomatch = 0, allow.cartesian = TRUE]
-      inter[, `:=` (mig = value * pop2 / 1000)]
-      setkeyv(inter, intersect(c("sex", "age", "edu"), names(inter)))
-      inter.out <- inter[, .(outmig = sum(mig)), by = c(key(inter), "origin")]
-      inter.in <- inter[, .(inmig = sum(mig)), by = c(key(inter), "destination")] 
-      resProj <- merge(projedu, inter.out, by = c(key(inter), "origin"), all.x = TRUE)
-      resProj <- merge(resProj, inter.in, by.x = c(key(inter), "origin"), by.y = c(key(inter), "destination"), all.x = TRUE)
+      dom <- projedu[dom, on = intersect(names(dom), names(projedu)), nomatch = 0, allow.cartesian = TRUE]
+      dom[, `:=` (mig = value * pop2 / 1000)]
+      setkeyv(dom, intersect(c("sex", "age", "edu"), names(dom)))
+      dom.out <- dom[, .(outmig = sum(mig)), by = c(key(dom), "origin")]
+      dom.in <- dom[, .(inmig = sum(mig)), by = c(key(dom), "destination")] 
+      resProj <- merge(projedu, dom.out, by = c(key(dom), "origin"), all.x = TRUE)
+      resProj <- merge(resProj, dom.in, by.x = c(key(dom), "origin"), by.y = c(key(dom), "destination"), all.x = TRUE)
       for (j in c("outmig", "inmig")) set(resProj, which(is.na(resProj[[j]])), j, 0)
-      resProj[, `:=` (pop3 = pop2 - outmig + inmig, origin = NULL)]
+      resProj[, `:=` (pop3 = pop2 - outmig + inmig)]
     } else {
       resProj <- copy(projedu)
       resProj[, pop3 := pop2]
       }
 
+    #----- international migration -----
+    setkeyv(int.dt, intersect(c("sex", "age", "edu"), names(int.dt)))
+    
+    #emigration: only rates (possibly transformed from abs and fixed for all periods)
+    #immigration: only abs
+    int <- int.dt[period == base.year + 5 * (iPr - 1)]
+    projedu <- projedu[resProj, on = intersect(names(projedu), names(resProj))]
+    origin.vars <- intersect(names(projedu), c("region", "residence"))
+    if (length(origin.vars) == 2) {
+      projedu[, `:=` (origin = paste(region, residence, sep = "_"))]
+    } else {
+      projedu[, `:=` (origin = paste(projedu[[origin.vars]], sep = "_"))]
+    }
+    int.out <- projedu[int[var == "mrate"], on = intersect(names(int), names(projedu)), nomatch = 0, allow.cartesian = TRUE]
+    int.out[, `:=` (emi = value * pop3)]
+    int.out <- int.out[, .(emi = sum(emi)), by = c(key(int), "origin")]
+    int.in <- int[var == "mabs", .(immi = sum(value)), by = c(key(int), "destination")]
+    resProj <- merge(projedu, int.out, by = c(key(int.dt), "origin"), all.x = TRUE)
+    resProj <- merge(resProj, int.in, by.x = c(key(dom), "origin"), by.y = c(key(dom), "destination"), all.x = TRUE)
+    for (j in c("emi", "immi")) set(resProj, which(is.na(resProj[[j]])), j, 0)
+    resProj[, `:=` (pop4 = pop3 - emi + immi, origin = NULL)]
+    
+    #----- fertility -----
     asfr1 <- asfredu.dt[period == base.year + 5 * (iPr - 1)][, period := NULL]
     resProj <- merge(resProj, asfr1, by = "pattern", all.x = TRUE)
     
-    p2.vars <- c(names(resProj)[1:(which(names(resProj) == "pop") - 1)], "pop3")
+    p2.vars <- c(names(resProj)[1:(which(names(resProj) == "pop") - 1)], "pop4")
     popedu2 <- resProj[, p2.vars, with = FALSE]
     popedu2[, age := age + 5]
     popedu2[age == 105, age := 100]
     popedu2[, pattern := do.call(paste, c(.SD, sep = "_")), .SDcols = p.vars]
-    popedu2 <- rbind(popedu2[age < 100], popedu2[age >= 100, .(pop3 = sum(pop3)), by = setdiff(names(popedu2), c("pop3"))])
-    setnames(popedu2, "pop3", "pop3.shift")
+    popedu2 <- rbind(popedu2[age < 100], popedu2[age >= 100, .(pop4 = sum(pop4)), by = setdiff(names(popedu2), c("pop4"))])
+    setnames(popedu2, "pop4", "pop4.shift")
     popedu2[, pattern := do.call(paste, c(.SD, sep = "_")), .SDcols = p.vars]
     
-    resProj <- merge(resProj, popedu2[, .(pattern, pop3.shift)], by = "pattern", all.x = TRUE)
+    resProj <- merge(resProj, popedu2[, .(pattern, pop4.shift)], by = "pattern", all.x = TRUE)
 
-    for (j in c("asfr", "pop3.shift")) set(resProj, which(is.na(resProj[[j]])), j, 0)    
-    resProj[, births := asfr * (pop + pop3.shift) / 2 / 200]
+    for (j in c("asfr", "pop4.shift")) set(resProj, which(is.na(resProj[[j]])), j, 0)    
+    resProj[, births := asfr * (pop + pop4.shift) / 2 / 200]
     area.vars <- c("region", "residence")
     if (any(area.vars %in% names(resProj))) {
       resProj[, area := do.call(paste, c(.SD, sep = "_")), .SDcols = intersect(names(projedu), area.vars)]
     } else {
       resProj[, area := country]
     }
-    
+
     pop.04 <- resProj[, .(births = sum(births)), by = area]
     sexRatio <- sexratio.dt[, .(area = area, sexr = sexr + ((1 / 1.05) * 1000 - sexr) / 8 * ifelse(iPr > 8, 8, iPr))]
     pop.04 <- pop.04[sexRatio, on = "area"]
-
+      
     s0.male <- nsxedu1[grep("\\bmale_-5", nsxedu1$pattern)]
     s0.female <- nsxedu1[grep("female_-5", nsxedu1$pattern)]
-    #only one nSx is used for all edu levels:
+      
     if (any(pop.04$area != country)) { #= if region and/or residence are given
+      #only one nSx is used for all edu levels:
       s0.male <- s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)[1]), ]
       s0.female <- s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)[1]), ]
+        
       pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), pattern],
-                                                                                   s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), nSx],
-                                                                                   s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), pattern],
-                                                                                   s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), nSx])]
+                                                                                    s0.male[sapply(pop.04$area, function(x) grep(x, s0.male$pattern)), nSx],
+                                                                                    s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), pattern],
+                                                                                    s0.female[sapply(pop.04$area, function(x) grep(x, s0.female$pattern)), nSx])]
       pop.04[, c("surv.male", "dead.male", "surv.female", "dead.female") := list(births * 1000 / (1000 + sexr) * s0.male,
-                                                                                 births * 1000 / (1000 + sexr) * (1 - s0.male),
-                                                                                 births * sexr / (1000 + sexr) * s0.female,
-                                                                                 births * sexr / (1000 + sexr) * (1 - s0.female))]
-    } else {
-      s0.male <- s0.male[1, ]
-      s0.female <- s0.female[1, ]
-      pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male$pattern, s0.male$nSx, s0.female$pattern, s0.female$nSx)]
-      pop.04[, c("surv.male", "dead.male", "surv.female", "dead.female") := list(births * 1000 / (1000 + sexr) * s0.male,
-                                                                                 births * 1000 / (1000 + sexr) * (1 - s0.male),
-                                                                                 births * sexr / (1000 + sexr) * s0.female,
-                                                                                 births * sexr / (1000 + sexr) * (1 - s0.female))] 
-      }
-
-    pop.04.d <- melt(pop.04, measure = patterns("^surv", "^dead", "^pattern"), value.name = c("pop3.shift", "deaths.nb", "pattern"))
+                                                                                  births * 1000 / (1000 + sexr) * (1 - s0.male),
+                                                                                  births * sexr / (1000 + sexr) * s0.female,
+                                                                                  births * sexr / (1000 + sexr) * (1 - s0.female))]
+      } else {
+        s0.male <- s0.male[1, ]
+        s0.female <- s0.female[1, ]
+        pop.04[, c("pattern.male", "s0.male", "pattern.female", "s0.female") := list(s0.male$pattern, s0.male$nSx, s0.female$pattern, s0.female$nSx)]
+        pop.04[, c("surv.male", "dead.male", "surv.female", "dead.female") := list(births * 1000 / (1000 + sexr) * s0.male,
+                                                                                   births * 1000 / (1000 + sexr) * (1 - s0.male),
+                                                                                   births * sexr / (1000 + sexr) * s0.female,
+                                                                                   births * sexr / (1000 + sexr) * (1 - s0.female))] 
+        }      
+             
+    pop.04.d <- melt(pop.04, measure = patterns("^surv", "^dead", "^pattern"), value.name = c("pop4.shift", "deaths.nb", "pattern"))
     pop.04.d$pattern <- sapply(pop.04.d$pattern, function(x) sub("-5", "0", x))
     
     resProj <- pop.04.d[, .(deaths.nb, pattern)][resProj, on = "pattern", nomatch = NA]
-    resProj[match(pop.04.d$pattern, resProj$pattern), pop3.shift := pop.04.d$pop3.shift]
+    resProj[match(pop.04.d$pattern, resProj$pattern), pop4.shift := pop.04.d$pop4.shift]
     setcolorder(resProj, c(names(resProj)[-1], "deaths.nb"))
     resProj[is.na(deaths.nb) == TRUE, deaths.nb := 0L]
+    
+    #----- reclassification -----
        
     if (exists("reclass.dt")) {
       proprur <- resProj[, .("pop2" = sum(pop2)), area]
@@ -479,8 +525,8 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
         proprur <- proprur[, .(region, reclasstr = reclass.dt$reclasstr)]
       }
  
-      resProj[, pop3.shift.total := rep(resProj[, .(sum(pop3.shift)), by = setdiff(p.vars, "residence")]$V1, each = 2)]
-      resProj[, `:=` (perural = pop3.shift / pop3.shift.total), ]
+      resProj[, pop4.shift.total := rep(resProj[, .(sum(pop4.shift)), by = setdiff(p.vars, "residence")]$V1, each = 2)]
+      resProj[, `:=` (perural = pop4.shift / pop4.shift.total), ]
       if ("region" %in% names(resProj)) {
         resProj <- resProj[proprur, on = "region", nomatch = NA]
       } else {
@@ -488,19 +534,21 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
       }
 
       setkey(resProj, "pattern") 
-      resProj[residence == "rural", pop4 := (pop3.shift.total * perural) - (pop3.shift.total * perural * reclasstr)]
-      resProj[residence == "urban", pop4 := (pop3.shift.total * perural) + (pop3.shift.total * (1 - perural) * reclasstr)]
-      for (j in c("perural", "pop4")) set(resProj, which(is.na(resProj[[j]])), j, 0)
+      resProj[residence == "rural", pop5 := (pop4.shift.total * perural) - (pop4.shift.total * perural * reclasstr)]
+      resProj[residence == "urban", pop5 := (pop4.shift.total * perural) + (pop4.shift.total * (1 - perural) * reclasstr)]
+      for (j in c("perural", "pop5")) set(resProj, which(is.na(resProj[[j]])), j, 0)
     } else {
-      resProj[, pop4 := pop3.shift] 
+      resProj[, pop5 := pop4.shift] 
       }
+    
+    #----- results -----
     
     setkeyv(resProj, p.vars)
     if(iPr == 1) results <- vector("list", iPr.fin + 1)
     results[[iPr]] <- resProj
 
     popedu.dt <- resProj[, c(intersect(names(popedu.dt), names(resProj))), with = FALSE]
-    popedu.dt[, `:=` (period = period + 5, var = "pop", value = resProj$pop4)]
+    popedu.dt[, `:=` (period = period + 5, var = "pop", value = resProj$pop5)]
     
     if(iPr == iPr.fin) {
       results[[iPr + 1]] <- popedu.dt[, `:=` (pop = value, var = NULL, value = NULL)] #final period
@@ -509,10 +557,23 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
       popedu.dt[age == 100, value := popedu.dt.100p[, value]]
       popedu.dt <- popedu.dt[age <= 100]
     }
-  }
 
+    if (iPr < iPr.fin & mig.adj == TRUE & "residence" %in% names(popedu1)) {
+      #adjustment factors adj.fac: population proportions, either for all region/residence combinations or only for the whole country divided 
+      #into rural/urban, at the end of the period divided by the values at the beginning
+      #dom.dt: multiply the values in dom.dt with the corresponding adjustment factors
+      dom.mig.adj <- popedu1[, .(ini = sum(pop)), by = intersect(names(popedu1), area.vars)]
+      dom.mig.adj <- dom.mig.adj[popedu.dt[, .(end = sum(value)), by = intersect(names(popedu1), area.vars)], on = intersect(names(popedu1), area.vars)]
+      dom.mig.adj[, `:=` (adj.fac = end / ini, origin = do.call(paste, c(.SD, sep = "_"))), .SDcols = intersect(names(popedu1), area.vars)]
+      dom.dt <- dom.dt[dom.mig.adj[, .(origin, adj.fac)], on = "origin"][, value := value * adj.fac][, adj.fac := NULL] 
+    }
+  }
+  
+  #----- output -----
+      
   #round results:
-  round.names <- intersect(c("pop", "pop1", "deaths", "pop2", "outmig", "inmig", "births", "deaths.nb", "pop3.shift"), names(resProj))
+  round.names <- intersect(c("pop", "pop1", "deaths", "pop2", "outmig", "inmig", "pop3", "emi", "immi", "pop4", 
+                             "births", "deaths.nb", "pop4.shift", "pop4.shift.total", "pop5"), names(resProj))
   lapply(results[1:iPr], function(x) x[, (round.names) := round(.SD), .SDcols = round.names])
   results[[iPr + 1]][, pop := round(pop)]
   
@@ -521,19 +582,19 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   write.csv(res, paste(file.path(path.1, path.2, paste("popprojFull", path.2, sep = "_")), ".csv", sep = ""))
   
   #standard output:
-  res.var <- intersect(c("pop", "births", "deaths", "outmig", "inmig", "pop3.shift"), names(resProj))
+  res.var <- intersect(c("pop", "births", "deaths", "outmig", "inmig", "pop4.shift"), names(resProj))
   res.list1 <- vector("list", length(res.var))
   res.list1 <- lapply(seq_along(res.var), function(x) {
     res.list1[[x]] <- xtabs(as.formula(paste(res.var[x], "~", paste(c("period", "sex", intersect(names(resProj), area.vars)), collapse = "+"))), data = res)
     })
   names(res.list1) <- res.var 
 
-  if (exists("inter.dt")) {
-    net.mig <- with(res.list1, (inmig) - (outmig))
-    res.list1$net.mig <- net.mig
+  if (exists("dom.dt")) {
+    net.dom <- with(res.list1, (inmig) - (outmig))
+    res.list1$net.dom <- net.dom
     }
-  
-  res.var <- c("pop3.shift", "pop4")
+    
+  res.var <- c("pop4.shift", "pop5")
   res.list2 <- vector("list", length(res.var))
   res.list2 <- lapply(seq_along(res.var), function(x) {
     res.list2[[x]] <- xtabs(as.formula(paste(res.var[x], "~", paste(c("period", intersect(names(resProj), area.vars)), collapse = "+"))), data = res)
@@ -541,12 +602,12 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   names(res.list2) <- res.var
   if ("residence" %in% names(resProj)) {
     if ("region" %in% names(resProj)) {
-      res.list2$prop.pop <- round(margin.table(res.list2$pop3.shift, 1:3)[, , 2] / margin.table(res.list2$pop3.shift, 1:2), 4) #proportion of urban population
-      res.list2$prop.reclass <- round((margin.table(res.list2$pop3.shift, 1:3)[, , 1] - margin.table(res.list2$pop4, 1:3)[, , 1]) / 
-        margin.table(res.list2$pop3.shift, 1:3)[, , 1], 4)  #proportion of reclassified (rural)
+      res.list2$prop.pop <- round(margin.table(res.list2$pop4.shift, 1:3)[, , 2] / margin.table(res.list2$pop4.shift, 1:2), 4) #proportion of urban population
+      res.list2$prop.reclass <- round((margin.table(res.list2$pop4.shift, 1:3)[, , 1] - margin.table(res.list2$pop5, 1:3)[, , 1]) / 
+        margin.table(res.list2$pop4.shift, 1:3)[, , 1], 4)  #proportion of reclassified (rural)
     } else {
-      res.list2$prop.pop <- round(margin.table(res.list2$pop3.shift, 1:2)[, 2] / margin.table(res.list2$pop3.shift, 1), 4)
-      res.list2$prop.reclass <- round((margin.table(res.list2$pop3.shift, 1:2)[, 1] - margin.table(res.list2$pop4, 1:2)[, 1]) / margin.table(res.list2$pop3.shift, 1:2)[, 1], 4)
+      res.list2$prop.pop <- round(margin.table(res.list2$pop4.shift, 1:2)[, 2] / margin.table(res.list2$pop4.shift, 1), 4)
+      res.list2$prop.reclass <- round((margin.table(res.list2$pop4.shift, 1:2)[, 1] - margin.table(res.list2$pop5, 1:2)[, 1]) / margin.table(res.list2$pop4.shift, 1:2)[, 1], 4)
     }
     res.list <- c(res.list1[c(1:3, 7)], res.list2[-(1:2)], SSP)
   } else {

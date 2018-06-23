@@ -18,16 +18,17 @@ The name of the scenario as contained in the names of all relevant data sets.
 }
 }
 \details{
-Using this function requires that all the relevant files (state space, variable defintions, and possibly migration) are contained in the same folder and show the same pattern in their names. This is guaranteed if the \code{state.space} function was used to create these files and the user didn't make any manual changes. If a user really wants to rename the files, it is only possible to do this for the parts specifying the country and the scenario, respectively, but the patterns "_mig", "_state_space", and "_var_def" must be kept in the naming!
+Using this function requires that all the relevant files (state space, variable definitions, and one or two migration files) are contained in the same folder and show the same pattern in their names. This is guaranteed if the \code{state.space} function was used to create these files and the user didn't make any manual changes. If a user really wants to rename the files, it is only possible to do this for the parts specifying the country and the scenario, respectively, but the patterns "_mig_dom" (for domestic migration), "_mig_int" (for international migration), "_state_space" (for the state space), and "_var_def" (for the variable definitions) must be kept in the naming!
 }
 \value{
-\code{fread.msproj} returns a list consisting of three elements if migration is considered or two elements otherwise:
+\code{fread.msproj} returns a list consisting of four elements if domestic migration is considered or three elements otherwise:
 
-\item{state.space}{A data frame containing the state space itself. It contains all the data needed to run the simulation (population, fertility, mortality etc.) for all possible combinations of sex, age, region etc. There is only one exception: Migration data has a different structure and thus, is written into a separate list element.}
+\item{domestic migration}{A data frame containing the rates or flows of domestic migration for each possible combination of origin and destination. Only created when domestic migration is part of the model.}
+\item{international migration}{A data frame containing the flows and rates of international migration for each possible combination of origin and destination.}
+\item{state.space}{A data frame containing the state space itself. It contains all the data needed to run the simulation (population, fertility, mortality etc.) for all possible combinations of sex, age, region etc. There is only one exception: Migration data has a different structure and thus, is written into one or two separate list elements.}
 \item{variable.definitions}{A two-dimensional vector containing an overview of the variables used in the simulation and the values they may take. This information is partly used in the simulation itself, but also can be seen as metadata that provides useful information about the specific simulation settings.}
-\item{migration}{A data frame containing the flows of migration for each possible combination of origin and destination. Only created when migration is part of the model.}
 
-Every list element represents one of the files that have been read. Hence, where \code{state.space} split up the list that it created and saved the list elements as single files to a certain directory, \code{fread.msproj} does just the opposite. When comparing the lists, the only difference is the matrix of education transitions that is created by \code{state.space}, but not save to a file, and thus, not included in the list created by \code{fread.msproj}.
+Every list element represents one of the files that have been read. Hence, where \code{state.space} split up the list that it created and saved the list elements as single files to a certain directory, \code{fread.msproj} does just the opposite. When comparing the lists, the only difference is the matrix of education transitions that is created by \code{state.space}, but not saved to a file, and thus, not included in the list created by \code{fread.msproj}.
 }
 %\references{
 %% ~put references to the literature/web site here ~

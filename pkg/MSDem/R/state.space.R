@@ -1,10 +1,10 @@
-#Function generates three files: 
+#Function generates three or four files: 
 # - variable definitions ('country_scenario_var_def.csv')
 # - empty state space ('country_scenario_state_space.csv')
-# - migration ('country_scenario_mig.csv')
+# - One or two migration files (only international or domestic plus international) ('country_scenario_mig_dom.csv' and/or 'country_scenario_mig_int.csv')
 
 state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence = c("rural", "urban"), sex = c("male", "female"),
-                        age = c(0, 100), edu = NULL, migration = "biregional", mig.var = "mrate", country = "Country", 
+                        age = c(0, 100), edu = NULL, dom = "biregional", dom.var = "mrate", int.emi.var = "mrate", country = "Country", 
                         scen = "SSP2", data.dir = "input_data/") {
   is.not.null <- function(x) !is.null(x)
   "%nin%" <- function(x, y) which(!x %in% y)
@@ -58,31 +58,38 @@ state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence
   sexr <- data.frame(period = period, matrix(NA, nrow = length(period), ncol = ncol(st.sp) - 1, dimnames = list(NULL, colnames(st.sp)[-1])), 
                 var = c("sexr"), 
                 matrix(NA, nrow = length(period), ncol = length(spatial.cols), dimnames = list(NULL, spatial.cols)))
-  #migration is possible if we have either region or residence or both
-  #biregional (region from/to rest) / bilateral (region from/to every other region) choice
-  #for bilateral migration, a matrix (wide) format is used; for biregional, the standard (long) format is kept
+  
   if (is.not.null(region) | is.not.null(residence)) {
     use.vars.mig <- c(st.sp.vars, list(origin = spatial.cols))
     if (by == 5) use.vars.mig$age <- setdiff(use.vars.mig$age, 1)
     use.vars.mig$period <- min(use.vars.mig$period)
-    if (migration == "bilateral") { #for bilateral, region must be there!
-      use.vars.mig$origin <- c(use.vars.mig$origin, "World")
-      mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
-      mig <- cbind(mig, var = mig.var, matrix(NA, ncol = length(use.vars.mig$origin), dimnames = list(NULL, use.vars.mig$origin)))
+
+    #international migration (many-to-one/one-to-many):
+    use.vars.mig$origin <- c(use.vars.mig$origin, "World")
+    im <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
+    use.vars.mig$destination <- use.vars.mig$origin
+    im <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
+    im <- subset(im, xor(origin == "World", destination == "World")) #no further distinction of cases needed
+    im <- cbind(im, var = factor("mabs", levels = c("mabs", "mrate")), value = NA)
+    im$var[im$origin != "World"] <- int.emi.var
+    rownames(im) <- 1:nrow(im)    
+
+    #domestic migration is possible if we have either region or residence or both
+    #biregional (region from/to rest) / bilateral (region from/to every other region) choice
+    #for bilateral domestic migration, a matrix (wide) format is used; for biregional, the standard (long) format is kept    
+    if (dom == "bilateral") { #for bilateral, region must be there!
+      use.vars.mig <- use.vars.mig[names(use.vars.mig) != "destination"]
+      use.vars.mig$origin <- setdiff(use.vars.mig$origin, "World")
+      dm <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
+      dm <- cbind(dm, var = dom.var, matrix(NA, ncol = length(use.vars.mig$origin), dimnames = list(NULL, use.vars.mig$origin)))
     } else { 
-      use.vars.mig$origin <- c(use.vars.mig$origin, country)
-      mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
-      use.vars.mig$destination <- use.vars.mig$origin
-      mig <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
-      mig <- subset(mig, xor(origin == country, destination == country)) #no further distinction of cases needed
-      mig <- cbind(mig, setNames(data.frame(NA), mig.var))
-      rownames(mig) <- 1:nrow(mig)
-      #international migration:
-      mig.int <- mig
-      idx <- which(names(mig.int) %in% c("origin", "destination"))
-      mig.int[, idx] <- lapply(mig.int[, idx], function(x) gsub(country, "World", x))
-      mig <- rbind(mig, mig.int)
-      }
+      idx <- names(im) %nin% c("var", "value")
+      dm <- im[ ,idx]
+      dm <- cbind(dm, setNames(data.frame(NA), dom.var))
+      idx <- which(names(dm) %in% c("origin", "destination"))
+      dm[, idx] <- lapply(dm[, idx], function(x) gsub("World", country, x))
+    }
+    
     #reclassification:
       if (is.not.null(residence)) {
         reclass <- data.frame(matrix(NA, nrow = 3, ncol = ncol(st.sp), dimnames = list(NULL, colnames(st.sp))), 
@@ -92,11 +99,24 @@ state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence
         var.def <- rbind(var.def, c("reclass", "TRUE"))
       } else {
         var.def <- rbind(var.def, c("reclass", "FALSE"))    
-        }
+      }
     
-    write.csv(mig, paste(input.dir, country, "_", scen, "_mig.csv", sep = ""), row.names = FALSE)
+      write.csv(dm, paste(input.dir, country, "_", scen, "_mig_dom.csv", sep = ""), row.names = FALSE)
+    } else { #international migration (one-to-one):
+      use.vars.mig <- c(st.sp.vars, list(origin = c(country, "World")))
+      if (by == 5) use.vars.mig$age <- setdiff(use.vars.mig$age, 1)
+      use.vars.mig$period <- min(use.vars.mig$period)
+      im <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
+      use.vars.mig$destination <- use.vars.mig$origin
+      im <- expand.grid(rev(use.vars.mig))[, length(use.vars.mig):1]
+      im <- subset(im, origin != destination)
+      im <- cbind(im, var = factor("mabs", levels = c("mabs", "mrate")), value = NA)
+      im$var[im$origin != "World"] <- int.emi.var
+      rownames(im) <- 1:nrow(im)         
     }
-  
+
+  write.csv(im, paste(input.dir, country, "_", scen, "_mig_int.csv", sep = ""), row.names = FALSE)
+    
   #education:
   if (is.not.null(edu)) {
     edu.len <- length(edu)
@@ -134,13 +154,16 @@ state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence
       edu.mat <- NULL
       }
   
-  #Update var.def to include migration:
+  #Update var.def to include domestic migration:
   if (is.not.null(region) | is.not.null(residence)) {  
-    var.def <- rbind(var.def, c("mig", migration))  
+    var.def <- rbind(var.def, c("mig.dom", dom), c("dom.in.var", dom.var), c("dom.out.var", dom.var))
   } else {
-    var.def <- rbind(var.def, c("mig", "no migration"))
+    var.def <- rbind(var.def, c("mig.dom", "no domestic migration"))
     }  
   
+  #Update var.def to include international migration (only biregional (one-to-one or one-to-many) at the moment):
+  var.def <- rbind(var.def, c("mig.int", "biregional"), c("int.immi.var", "mabs"), c("int.emi.var", int.emi.var))
+    
   #merging the files:
   st.sp <- rbind(pop, mort, fert, sexr)
   if (exists("reclass")) st.sp <- rbind(st.sp, reclass)
@@ -149,14 +172,24 @@ state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence
     st.sp <- rbind(st.sp, educ)
   } 
 
-  write.csv(var.def, paste(input.dir, country, "_", scen, "_var_def.csv", sep = ""), row.names = FALSE) #doesn't include possible education transitions  
   row.names(st.sp) <- 1:nrow(st.sp)
   write.csv(st.sp, paste(input.dir, country, "_", scen, "_state_space.csv", sep = ""), row.names = FALSE)    
-  res <- list(state.space = st.sp, variable.definitions = var.def, migration = NULL, edu.trans = edu.mat)
-  if (exists("mig")) {
-    res$migration <- mig
+  
+  #add dimension of the files to var.def:
+  var.def <- rbind(var.def, matrix(c("state_space.rows", "state_space.cols", dim(st.sp)), ncol = 2))
+  if (is.not.null(region) | is.not.null(residence)) {  
+    var.def <- rbind(var.def, matrix(c("mig_dom.rows", "mig_dom.cols", dim(dm)), ncol = 2))
+  }   
+  var.def <- rbind(var.def, matrix(c("mig_int.rows", "mig_int.cols", dim(im)), ncol = 2))
+  
+  write.csv(var.def, paste(input.dir, country, "_", scen, "_var_def.csv", sep = ""), row.names = FALSE) #doesn't include possible education transitions
+  
+  
+  res <- list(state.space = st.sp, variable.definitions = var.def, mig.dom = NULL, mig.int = im, edu.trans = edu.mat)
+  if (exists("dm")) {
+    res$mig.dom <- dm
   } else {
-    res <- res[names(res) != "migration"]
+    res <- res[names(res) != "mig.dom"]
   }
   return(res)
 }

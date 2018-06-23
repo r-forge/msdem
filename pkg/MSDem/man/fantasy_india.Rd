@@ -13,11 +13,12 @@ time needed to run the model short.
 }
 \usage{data("fantasy_india")}
 \format{
-  A list with the following 3 components.
+  A list with the following 4 components.
   \describe{
-    \item{\code{india_AGSRE_Baseline_mig}}{a data table containing migration data}
-    \item{\code{india_AGSRE_Baseline_state_space}}{a data table containing the state space}
-    \item{\code{india_AGSRE_Baseline_var_def}}{a data table containing the variable definition}
+    \item{\code{India_AGESR_Baseline_mig_dom}}{a data table containing domestic migration data}
+    \item{\code{India_AGESR_Baseline_mig_int}}{a data table containing (mock) international migration data}
+    \item{\code{India_AGESR_Baseline_state_space}}{a data table containing the state space}
+    \item{\code{India_AGESR_Baseline_var_def}}{a data table containing the variable definition}
   }
 }
 %\details{

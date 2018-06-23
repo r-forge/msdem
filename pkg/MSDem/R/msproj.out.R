@@ -70,31 +70,39 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
     }
   }
   
-  #-----4. Migration:-----
-  if ("net.mig" %in% names(res.list1)) {
+  #-----4. Domestic migration:-----
+  if ("net.dom" %in% names(res.list1)) {
     det.out$inmig <- cbind(margin.table(res.list1$inmig, 1), margin.table(res.list1$inmig, c(1, 3)))
     colnames(det.out$inmig)[1] <- country
     det.out$outmig <- cbind(margin.table(res.list1$outmig, 1), margin.table(res.list1$outmig, c(1, 3)))
     colnames(det.out$outmig)[1] <- country
-    }
+  }
+  
+  # #-----5. International migration:-----
+  # if ("net.int" %in% names(res.list1)) {
+  #   det.out$immi <- cbind(margin.table(res.list1$immi, 1), margin.table(res.list1$immi, c(1, 3)))
+  #   colnames(det.out$inmig)[1] <- country
+  #   det.out$emi <- cbind(margin.table(res.list1$emi, 1), margin.table(res.list1$emi, c(1, 3)))
+  #   colnames(det.out$emi)[1] <- country
+  # }
 
   #-----5. TFR:----- 
   if ("region" %in% p.vars) {
     res.vars <- c("period", "region", "age")
-    tfr <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+    tfr <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
     for (j in seq_len(ncol(tfr)))
-    set(tfr, which(is.na(tfr[[j]])), j, 0)
+      set(tfr, which(is.na(tfr[[j]])), j, 0)
     det.out$tfr <- tfr[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")] 
   } else {
     res.vars <- c("period", "age")
-    tfr <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+    tfr <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
     for (j in seq_len(ncol(tfr)))
       set(tfr, which(is.na(tfr[[j]])), j, 0)
     det.out$tfr <- tfr[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]
     }
   
   res.vars <- c("period", "age")
-  tfr.country <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+  tfr.country <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
   for (j in seq_len(ncol(tfr.country)))
     set(tfr.country, which(is.na(tfr.country[[j]])), j, 0)
   det.out$tfr.country <- tfr.country[, .(TFR = round(sum(TFR) / 200, 2)), setdiff(res.vars, "age")]
@@ -102,7 +110,7 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
   
   if ("edu" %in% p.vars) {
     res.vars <- c("period", intersect(c("region", "age", "edu"), p.vars))
-    tfr.edu <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+    tfr.edu <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
     for (j in seq_len(ncol(tfr.edu)))
       set(tfr.edu, which(is.na(tfr.edu[[j]])), j, 0)
     det.out$tfr.edu <- tfr.edu[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]
@@ -111,7 +119,7 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
   if ("residence" %in% p.vars) {
     if ("region" %in% p.vars) {
       res.vars <- c("period", "region", "age", "residence")
-      tfr.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+      tfr.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
       for (j in seq_len(ncol(tfr.res)))
         set(tfr.res, which(is.na(tfr.res[[j]])), j, 0)
       tfr.res <- tfr.res[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]    
@@ -119,7 +127,7 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
       det.out$tfr.res <- tfr.res[, .(period, area, TFR)]
     } else {
     res.vars <- c("period", "residence", "age")
-    tfr.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+    tfr.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
     for (j in seq_len(ncol(tfr.res)))
       set(tfr.res, which(is.na(tfr.res[[j]])), j, 0)
     det.out$tfr.res <- tfr.res[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]    
@@ -129,7 +137,7 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
   if (all(c("residence", "edu") %in% p.vars)) {
     if ("region" %in% p.vars) {
       res.vars <- c("period", "region", "age", "edu", "residence")
-      tfr.edu.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+      tfr.edu.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
       for (j in seq_len(ncol(tfr.edu.res)))
         set(tfr.edu.res, which(is.na(tfr.edu.res[[j]])), j, 0)
       tfr.edu.res <- tfr.edu.res[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]    
@@ -137,7 +145,7 @@ msproj.out <- function(res, res.list, res.list1, out.name, p.vars, country, area
       det.out$tfr.edu.res <- tfr.edu.res[ , .(period, area, edu, TFR)] 
     } else {
       res.vars <- c("period", "residence", "age", "edu")
-      tfr.edu.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop3.shift) / 2) / 5 * 1000), by = res.vars]
+      tfr.edu.res <- res[period < max(period) & age >= 15 & age < 50 & sex == "female", .(TFR = sum(births) / (sum(pop, pop4.shift) / 2) / 5 * 1000), by = res.vars]
       for (j in seq_len(ncol(tfr.edu.res)))
         set(tfr.edu.res, which(is.na(tfr.edu.res[[j]])), j, 0)
       det.out$tfr.edu.res <- tfr.edu.res[, .(TFR = round(sum(TFR) / 200, 2)), by = setdiff(res.vars, "age")]        

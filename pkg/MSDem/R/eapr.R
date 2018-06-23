@@ -44,12 +44,12 @@ eapr <- function(x, ass.edu.dt, maxeapr5) {
   neweapr.t1[cbind(match(eapr.age.t1-5,rownames(neweapr.t1)),match(eapr.edu.t1,colnames(neweapr.t1)))] <- eapr.t1
   
   #t2
-  eapr.t2 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) + 5 & edu == unique(edu), value] #1.03ms
+  eapr.t2 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) + 5 & edu %in% unique(edu), value] #1.03ms
   eapr.t2[nedu-1] <- max(eapr.eduage.plus5.t0[nedu-1, nedu-1], min(maxeapr, eapr.t2[nedu-1]))
   neweapr.t2[cbind(match(eapr.age.t1-5,rownames(neweapr.t1)),match(eapr.edu.t1,colnames(neweapr.t1)))] <- eapr.t2
   
   #t+15
-  eapr.t3 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) + 10 & edu == unique(edu), value] #1.03ms
+  eapr.t3 <- ass.edu.dt[areasex == unique(x$areasex) & period == unique(x$period) + 10 & edu %in% unique(edu), value] #1.03ms
   eapr.t3[nedu-1] <- max(eapr.eduage.plus5.t0[nedu-1, nedu-1], min(maxeapr, eapr.t3[nedu-1]))
   neweapr.t3[cbind(match(eapr.age.t1-5,rownames(neweapr.t1)),match(eapr.edu.t1,colnames(neweapr.t1)))] <- eapr.t3
   
