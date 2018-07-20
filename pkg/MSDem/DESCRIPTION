@@ -1,8 +1,8 @@
 Package: MSDem
 Type: Package
 Title: Multi-State Demography
-Version: 0.0.4
-Date: 2018-06-23
+Version: 0.0.4.1
+Date: 2018-07-20
 Author: Marcus Wurzer [aut, cre],
   Samir KC [aut],
   Markus Speringer [ctb]

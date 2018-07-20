@@ -100,8 +100,15 @@ state.space <- function(period = c(2010, 2100), by = 5, region = NULL, residence
       } else {
         var.def <- rbind(var.def, c("reclass", "FALSE"))    
       }
-    
-      write.csv(dm, paste(input.dir, country, "_", scen, "_mig_dom.csv", sep = ""), row.names = FALSE)
+      if (prod(dim(dm)) < 5e7) {
+        write.csv(dm, paste(input.dir, country, "_", scen, "_mig_dom.csv", sep = ""), row.names = FALSE)  
+      } else {
+        invisible(sapply(period, function(x) {
+          dm$period <- x
+          write.csv(dm, paste(input.dir, country, "_", scen, "_mig_dom_", x, ".csv", sep = ""), row.names = FALSE)
+        }))
+      }
+      
     } else { #international migration (one-to-one):
       use.vars.mig <- c(st.sp.vars, list(origin = c(country, "World")))
       if (by == 5) use.vars.mig$age <- setdiff(use.vars.mig$age, 1)

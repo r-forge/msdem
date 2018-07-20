@@ -102,11 +102,12 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
   sexratio.dt <- data[[pos.st.sp]][var == "sexr"]
   if (nrow(sexratio.dt) == 0) {
     sexratio.dt <- data[[pos.st.sp]][var %in% c("sexr_rur", "sexr_urb", "sexr_tot")]
-    }
-  sexratio.dt <- melt(sexratio.dt, id.vars = c("var"), measure.vars = names(sexratio.dt)[-c(1:which(names(sexratio.dt) == "var"))], 
+  }
+  sexratio.dt <- melt(sexratio.dt, id.vars = c("period", "var"), measure.vars = names(sexratio.dt)[-c(1:which(names(sexratio.dt) == "var"))], 
                       variable.name = "area", value.name = "sexr")
   sexratio.dt <- sexratio.dt[sexr != 0][, var := NULL]
   if (any(sexratio.dt$area == "value")) sexratio.dt$area <- country
+  sexratio.dt <- sexratio.dt[order(period, area)]
   
   #column order for popedu.dt, asfredu.dt, ass.edu.dt, dom.dt and nsxedu.dt:
   col.order <- c("period", "sex", "age", "edu", "region", "residence", "origin", "destination", "pattern", "var", "value")
@@ -464,7 +465,7 @@ msproj <- function(data = NULL, patt = NULL, country = NULL, SSP = "SSP2", fert 
     }
 
     pop.04 <- resProj[, .(births = sum(births)), by = area]
-    sexRatio <- sexratio.dt[, .(area = area, sexr = sexr + ((1 / 1.05) * 1000 - sexr) / 8 * ifelse(iPr > 8, 8, iPr))]
+    sexRatio <- sexratio.dt[period == base.year + 5 * (iPr - 1)][, period := NULL]
     pop.04 <- pop.04[sexRatio, on = "area"]
       
     s0.male <- nsxedu1[grep("\\bmale_-5", nsxedu1$pattern)]
